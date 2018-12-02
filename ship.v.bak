@@ -1,0 +1,5 @@
+module ship(
+	x, y, rgb
+);
+
+endmodule 

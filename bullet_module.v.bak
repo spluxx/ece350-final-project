@@ -1,0 +1,9 @@
+module bullet_module(
+	clock,
+	ship_x, ship_y,
+	x, y,
+	fire,
+	rgb
+);
+
+endmodule 

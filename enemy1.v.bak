@@ -1,0 +1,6 @@
+module enemy1(
+		clock, 
+	x, y, 
+	left, right, up, down,
+	rgb
+)

@@ -1,0 +1,60 @@
+-- 10x5 24bit image color values
+
+WIDTH = 24;
+DEPTH =   50;
+
+ADDRESS_RADIX = UNS;
+DATA_RADIX = HEX;
+
+CONTENT BEGIN
+   0 : 000000;
+   1 : 000000;
+   2 : FFFFFF;
+   3 : 000000;
+   4 : 000000;
+   5 : 000000;
+   6 : FFFFFF;
+   7 : FFFFFF;
+   8 : FFFFFF;
+   9 : 000000;
+  10 : 000000;
+  11 : FFFFFF;
+  12 : FFFFFF;
+  13 : FFFFFF;
+  14 : 000000;
+  15 : 000000;
+  16 : FFFFFF;
+  17 : FFFFFF;
+  18 : FFFFFF;
+  19 : 000000;
+  20 : 000000;
+  21 : FFFFFF;
+  22 : FFFFFF;
+  23 : FFFFFF;
+  24 : 000000;
+  25 : FFFFFF;
+  26 : FFFFFF;
+  27 : FFFFFF;
+  28 : FFFFFF;
+  29 : FFFFFF;
+  30 : FFFFFF;
+  31 : FFFFFF;
+  32 : FFFFFF;
+  33 : FFFFFF;
+  34 : FFFFFF;
+  35 : FFFFFF;
+  36 : FFFFFF;
+  37 : FFFFFF;
+  38 : FFFFFF;
+  39 : FFFFFF;
+  40 : 0000FF;
+  41 : 0000FF;
+  42 : 0000FF;
+  43 : 0000FF;
+  44 : 0000FF;
+  45 : 0000FF;
+  46 : 00FFFF;
+  47 : 00FFFF;
+  48 : 00FFFF;
+  49 : 0000FF;
+END;

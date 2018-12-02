@@ -1,0 +1,180 @@
+module vga_controller(
+	CLOCK_50, // syncing with processor
+	
+	iRST_n,
+	iVGA_CLK,
+	oBLANK_n,
+	oHS,
+	oVS,
+	b_data,
+	g_data,
+	r_data,
+
+	// interface with the processor
+	data_ready,
+	data_pos,
+	data_dim,
+	data_type_index,
+	
+	// ship controller
+	left,
+	right,
+	up,
+	down
+);
+
+input CLOCK_50;
+input iRST_n;
+input iVGA_CLK;
+output reg oBLANK_n;
+output reg oHS;
+output reg oVS;
+output [7:0] b_data;
+output [7:0] g_data;  
+output [7:0] r_data;      
+
+input data_ready;
+input [31:0] data_pos, data_dim, data_type_index;
+                  
+///////// ////                     
+reg [18:0] ADDR;
+wire VGA_CLK_n;
+wire [23:0] bgr_data;
+wire cBLANK_n,cHS,cVS,rst;
+////
+assign rst = ~iRST_n;
+video_sync_generator LTM_ins (.vga_clk(iVGA_CLK),
+                              .reset(rst),
+                              .blank_n(cBLANK_n),
+                              .HS(cHS),
+                              .VS(cVS));
+////
+////Addresss generator
+always@(posedge iVGA_CLK,negedge iRST_n)
+begin
+  if (!iRST_n)
+     ADDR<=19'd0;
+  else if (cHS==1'b0 && cVS==1'b0)
+     ADDR<=19'd0;
+  else if (cBLANK_n==1'b1)
+     ADDR<=ADDR+19'd1;
+end
+
+///////////////////
+//////Delay the iHD, iVD,iDEN for one clock cycle;
+always@(negedge iVGA_CLK)
+begin
+  oHS<=cHS;
+  oVS<=cVS;
+  oBLANK_n<=cBLANK_n;
+end
+
+///////////////////////////////////
+// Processor-controlled entities
+wire[127:0] wen;
+assign wen = data_ready << data_type_index[6:0]; // first 7 bits
+
+wire[18:0] x, y;
+assign x = ADDR % 19'd640;
+assign y = ADDR / 19'd640; 
+
+wire[15:0] x_offsets[127:0];
+wire[15:0] y_offsets[127:0];
+wire[15:0] widths[127:0];
+wire[15:0] types[127:0];
+wire 		  hits[127:0];
+
+genvar i;
+generate 
+	for(i = 0 ; i < 128 ; i = i + 1) begin: entities
+		entitiy_reg entity(
+			.clk(CLOCK_50),			// might need to flip
+			.d_pos(data_pos),
+			.d_dim(data_dim),
+			.d_type(data_type_index[31:16]),
+			.write_enable(wen[i]), 
+			.x(x),
+			.y(y),
+			.x_offset(x_offsets[i]),
+			.y_offset(y_offsets[i]),
+			.width(widths[i]),
+			.q_type(types[i]),
+			.hit(hits[i])
+		);
+	end
+endgenerate	
+
+/////////////////////////////////////
+// Ship - Fixed width 60 height 80
+input left, right, up, down;
+
+reg[18:0] ship_x, ship_y;
+reg[31:0] ctrl_counter;
+
+initial begin
+	ship_x <= 19'd320;
+	ship_y <= 19'd400;
+	ctrl_counter <= 32'd0;
+end
+
+always @(negedge iVGA_CLK) begin 
+	ctrl_counter = ctrl_counter + 1;
+	if(ctrl_counter > 32'd1000000) begin
+		if(left) ship_x = ship_x - 1;
+		if(right) ship_x = ship_x + 1;
+		if(up) ship_y = ship_y - 1;
+		if(down) ship_y = ship_y + 1;
+		ctrl_counter = 32'd0;
+	end
+end
+
+// final decision on the pixel
+reg[18:0] image_addr;
+reg[4:0] image_index;
+
+integer j;
+always @(negedge iVGA_CLK) begin
+	image_index <= 5'd31; // background
+	image_addr <= ADDR;  // background
+	
+	if(ship_x <= x && x < ship_x + 60 && ship_y <= y && y < ship_y + 80) begin
+		image_index <= 5'd0;
+		image_addr <= (y-ship_y)*32'd60 + (x-ship_x);
+	end
+	
+	for(j = 0 ; j < 128 ; j = j + 1) begin
+		if(hits[j] && (image_index > types[j])) begin // the lower-valued types get priority
+ 			image_addr <= y_offsets[j] * widths[j] + x_offsets[j];
+			image_index <= types[j][4:0];
+		end
+	end
+end
+
+image_hub hub(
+	.iVGA_CLK(iVGA_CLK),
+	.image_index(image_index),
+	.addr(image_addr),
+	.bgr_data(bgr_data)
+);
+
+assign b_data = bgr_data[23:16];
+assign g_data = bgr_data[15:8];
+assign r_data = bgr_data[7:0]; 
+
+endmodule
+ 	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
