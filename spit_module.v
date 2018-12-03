@@ -1,5 +1,6 @@
 module spit_module(
 	clock,
+	start,
 	enemy_pos,
 	enemy_dead,
 	x, y,
@@ -10,7 +11,7 @@ module spit_module(
 
 parameter NUM_ENEMY = 5;
 
-input clock;
+input clock, start;
 input [20*NUM_ENEMY-1:0] enemy_pos;
 input [NUM_ENEMY-1:0] enemy_dead;
 input [18:0] x, y;
@@ -45,19 +46,21 @@ always @(posedge clock) begin // when initialize bit is asserted
 end
 
 always @(posedge clock) begin
-	if(fire_delay < 100) begin
-		fire_spit = 30'd0; // make sure it's unplugged
+	if(start) begin
+		if(fire_delay < 100) begin
+			fire_spit = 30'd0; // make sure it's unplugged
+		end
+		
+		if(fire_delay == 100000) begin
+			enemy_index = prbs[6:0] % NUM_ENEMY;
+			fire_x = enemy_x[enemy_index];
+			fire_y = enemy_y[enemy_index];
+			fire_spit[index] = ~enemy_dead[enemy_index];
+			if(index == 30) index = 0;
+			fire_delay = 0;
+		end
+		fire_delay = fire_delay + 1;
 	end
-	
-	if(fire_delay == 2000000) begin
-		enemy_index = prbs[6:0] % NUM_ENEMY;
-		fire_x = enemy_x[enemy_index];
-		fire_y = enemy_y[enemy_index];
-		fire_spit[index] = ~enemy_dead[enemy_index];
-		if(index == 30) index = 0;
-		fire_delay = 0;
-	end
-	fire_delay = fire_delay + 1;
 end
 
 genvar i;

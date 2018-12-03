@@ -3,7 +3,9 @@ module GAME_MODULE(
 	start,
 	x, y,
 	up, left, right, down, fire,
-	rgb
+	ship_dead,
+	rgb,
+	leds
 );
 
 parameter NUM_ENEMY1 = 6;
@@ -12,22 +14,32 @@ input clock;
 input start;
 input [18:0] x, y;
 output[23:0] rgb;
+output ship_dead;
+output[7:0] leds;
 
 ////////////////////////////////////////////////
 // Ship - Fixed width 30 height 40
 input left, right, up, down, fire;
 wire [18:0] ship_x, ship_y;
 wire [23:0] ship_rgb;
+wire [19:0] ship_pos;
+assign ship_pos[19:10] = ship_x[9:0];
+assign ship_pos[9:0] = ship_y[9:0];
+wire collided_ship;
+
 ship ship_inst(
-	clock,
-	start,
-	x, y,
-	~start | left, 
-	~start | right, 
-	~start | up, 
-	~start | down,
-	ship_x, ship_y,
-	ship_rgb
+	.clock(clock),
+	.start(start),
+	.initial_hp(5),
+	.x(x), .y(y),
+	.left(~start | left), 
+	.right(~start | right), 
+	.up(~start | up), 
+	.down(~start | down),
+	.ship_x(ship_x), .ship_y(ship_y),
+	.collided(collided_ship),
+	.ship_dead(ship_dead),
+	.rgb(ship_rgb)
 );
 
 ////////////////////////////////////////////////////
@@ -68,16 +80,15 @@ endgenerate
 
 bullet_module bullet_module_inst (
 	.clock(clock),
+	.start(start),
 	.ship_x(ship_x), 
 	.ship_y(ship_y),
 	.x(x), .y(y),
 	.collided(collided_bullets),
-	.fire(fire && start),
+	.fire(fire),
 	.bullet_pos(bullet_pos),
 	.rgb(rgb_bullet)
 );
-
-assign collided_spit = 30'd0; // for now
 
 collision_module #(
 	.objectA_cnt(NUM_ENEMY1),
@@ -98,6 +109,7 @@ spit_module #(
 	.NUM_ENEMY(NUM_ENEMY1)
 )spit_module_inst (
 	.clock(clock),
+	.start(start),
 	.enemy_pos(enemy_pos),
 	.enemy_dead(enemy_dead),
 	.x(x), .y(y),
@@ -105,6 +117,24 @@ spit_module #(
 	.spit_pos(spit_pos),
 	.rgb(rgb_spit)
 );
+
+collision_module #(
+	.objectA_cnt(1),
+	.objectA_width(30), // 30
+	.objectA_height(40),
+	.objectB_cnt(30),
+	.objectB_width(10), // 5
+	.objectB_height(10)
+) ship_spit_collision_module (
+	.clock(clock),
+	.objectA_positions(ship_pos),
+	.objectB_positions(spit_pos),
+	.resultA(collided_ship),
+	.resultB(collided_spit)
+);
+
+assign leds[0] = collided_ship;
+assign leds[7:1] = collided_spit[6:0];
 
 
 ////////////////////////////////////////////////

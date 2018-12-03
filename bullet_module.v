@@ -1,5 +1,6 @@
 module bullet_module(
 	clock,
+	start,
 	ship_x, ship_y,
 	x, y,
 	collided,
@@ -8,7 +9,7 @@ module bullet_module(
 	rgb
 );
 
-input clock;
+input clock, start;
 input [18:0] ship_x, ship_y, x, y;
 input fire;
 input[29:0] collided;
@@ -19,6 +20,7 @@ output [23:0] rgb;
 wire [23:0] rgb_res[29:0];
 wire hit[29:0];
 
+reg state;
 reg[4:0] index;
 reg[29:0] fire_bullet;
 reg[31:0] fire_delay;
@@ -27,10 +29,19 @@ initial begin
 	index <= 5'd0;
 	fire_bullet <= 30'd0;
 	fire_delay <= 32'd0;
+	state = 0;
 end
 
 always @(posedge clock) begin
-	if(fire) begin
+	if(state == 0 && start) begin
+		if(fire_delay == 5000000) begin
+			state = 1;
+			fire_delay = 0;
+		end
+		fire_delay = fire_delay+1;
+	end
+	
+	if(state == 1 && fire) begin
 		if(fire_delay < 100) begin
 			fire_bullet = 30'd0; // make sure it's unplugged
 		end
@@ -43,6 +54,11 @@ always @(posedge clock) begin
 			fire_delay = 0;
 		end
 		fire_delay = fire_delay + 1;
+	end
+	
+	if(~start) begin
+		fire_delay = 0;
+		state = 0;
 	end
 end
 

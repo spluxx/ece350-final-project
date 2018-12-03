@@ -99,7 +99,8 @@ module skeleton(
 		.right(right),
 		.up(up),
 		.down(down),
-		.fire(fire)
+		.fire(fire),
+		.leds(leds)
 	);
 	
 endmodule

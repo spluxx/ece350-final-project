@@ -15,7 +15,9 @@ module vga_controller(
 	right,
 	up,
 	down,
-	fire
+	fire,
+	
+	leds
 );
 
 input CLOCK_50;
@@ -26,7 +28,9 @@ output reg oHS;
 output reg oVS;
 output [7:0] b_data;
 output [7:0] g_data;  
-output [7:0] r_data;  
+output [7:0] r_data; 
+
+output [7:0] leds; 
 
 input left, right, up, down, fire; 
 
@@ -71,14 +75,28 @@ assign x = ADDR%19'd640;
 assign y = ADDR/19'd640;
 
 reg state;
+reg[31:0] counter;
+
+wire ship_dead;
 
 initial begin
 	state = 0;
+	counter = 0;
 end
 
+
 always @(posedge iVGA_CLK) begin
-	if(~up) state = 1;
-	if(~down) state = 0;
+	if(state == 1 && (~down || ship_dead)) begin
+		state = 0;
+		counter = 0;
+	end
+	
+	if(state == 0) begin
+		if(~up) state = 1;
+		if(counter < 32'h07ffffff) begin
+			counter = counter + 1;
+		end
+	end
 end
 
 //////////////////
@@ -94,7 +112,9 @@ GAME_MODULE game_inst(
 	.right(right),
 	.down(down),
 	.fire(fire),
-	.rgb(game_rgb)
+	.ship_dead(ship_dead),
+	.rgb(game_rgb),
+	.leds(leds)
 );
 
 //////////////////
@@ -128,8 +148,13 @@ img_menu_text_data img_menu_text_inst (
 	.q(menu_text_data)
 );
 
-assign logo_rgb = logo_data == 1 ? 24'hFFFFFF : 24'd0;
-assign menu_text_rgb = menu_text_data == 1 ? 24'hFFFFFF : 24'd0;
+wire[23:0] gradient; 
+assign gradient[23:16] = counter >> 19;
+assign gradient[15:8] = counter >> 19;
+assign gradient[7:0] = counter >> 19;
+
+assign logo_rgb = logo_data ? gradient : 24'd0;
+assign menu_text_rgb = menu_text_data ? gradient : 24'd0;
 
 /////////////////////////////////////////////////
 // Background
