@@ -197,9 +197,17 @@ set_global_assignment -name VERILOG_FILE bullet_module.v
 set_global_assignment -name QIP_FILE img_bullet.qip
 set_location_assignment PIN_Y23 -to fire
 set_global_assignment -name VERILOG_FILE bullet.v
-set_global_assignment -name QIP_FILE img_ship.qip
 set_global_assignment -name QIP_FILE img_enemy1.qip
 set_global_assignment -name VERILOG_FILE collision_module.v
 set_global_assignment -name VERILOG_FILE GAME_MODULE.v
 set_global_assignment -name QIP_FILE bgr_data.qip
+set_global_assignment -name QIP_FILE img_logo.qip
+set_global_assignment -name QIP_FILE img_menu_text_data.qip
+set_global_assignment -name VERILOG_FILE asteroid_module.v
+set_global_assignment -name VERILOG_FILE asteroid.v
+set_global_assignment -name QIP_FILE img_ship1.qip
+set_global_assignment -name QIP_FILE img_ship2.qip
+set_global_assignment -name QIP_FILE img_ship3.qip
+set_global_assignment -name VERILOG_FILE spit_module.v
+set_global_assignment -name VERILOG_FILE spit.v
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

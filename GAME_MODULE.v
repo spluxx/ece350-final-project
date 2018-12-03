@@ -22,7 +22,10 @@ ship ship_inst(
 	clock,
 	start,
 	x, y,
-	left, right, up, down,
+	~start | left, 
+	~start | right, 
+	~start | up, 
+	~start | down,
 	ship_x, ship_y,
 	ship_rgb
 );
@@ -33,12 +36,17 @@ ship ship_inst(
 
 wire [23:0] rgb_bullet;
 wire [23:0] enemy_rgb[NUM_ENEMY1-1:0];
+wire [23:0] rgb_spit;
 
 wire [20*30-1:0] bullet_pos; // 32*30
 wire [20*NUM_ENEMY1-1:0] enemy_pos;
+wire [20*30-1:0] spit_pos;
 
 wire [29:0] collided_bullets;
 wire [NUM_ENEMY1-1:0] collided_enemy;
+wire [29:0] collided_spit;
+
+wire [NUM_ENEMY1-1:0] enemy_dead;
 
 genvar i;
 generate
@@ -51,6 +59,7 @@ generate
 			.initialize(start),
 			.x(x), .y(y),
 			.collided(collided_enemy[i]),
+			.enemy_dead(enemy_dead[i]),
 			.enemy_pos(enemy_pos[20*i+19 : 20*i]),
 			.rgb(enemy_rgb[i])
 		);
@@ -68,6 +77,8 @@ bullet_module bullet_module_inst (
 	.rgb(rgb_bullet)
 );
 
+assign collided_spit = 30'd0; // for now
+
 collision_module #(
 	.objectA_cnt(NUM_ENEMY1),
 	.objectA_width(30), // 30
@@ -81,6 +92,18 @@ collision_module #(
 	.objectB_positions(bullet_pos),
 	.resultA(collided_enemy),
 	.resultB(collided_bullets)
+);
+
+spit_module #(
+	.NUM_ENEMY(NUM_ENEMY1)
+)spit_module_inst (
+	.clock(clock),
+	.enemy_pos(enemy_pos),
+	.enemy_dead(enemy_dead),
+	.x(x), .y(y),
+	.collided(collided_spit),
+	.spit_pos(spit_pos),
+	.rgb(rgb_spit)
 );
 
 
@@ -110,7 +133,8 @@ assign rgb = (x==0 || x >= 512)				?  24'h000000 : // in this case, it's literal
 //					 enemy_rgb[17] != 24'h000000 	? 	enemy_rgb[17] :
 //					 enemy_rgb[18] != 24'h000000 	? 	enemy_rgb[18] :
 //					 enemy_rgb[19] != 24'h000000 	? 	enemy_rgb[19] :
-					 rgb_bullet != 24'h000000 		?  rgb_bullet : 24'h000000;
+					 rgb_bullet != 24'h000000 		?  rgb_bullet : 
+					 rgb_spit != 24'h000000 		?  rgb_spit : 24'h000000;
 
 
 endmodule 

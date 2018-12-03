@@ -97,12 +97,51 @@ GAME_MODULE game_inst(
 	.rgb(game_rgb)
 );
 
+//////////////////
+// MENU SCREEN
+wire[18:0] logo_dx, logo_dy;
+wire logo_hit;
+assign logo_dx = x-20;
+assign logo_dy = y-50;
+assign logo_hit = 0 < logo_dx && logo_dx < 480 &&
+						0 < logo_dy && logo_dy < 80;
 
+wire[18:0] menu_text_dx, menu_text_dy;
+wire menu_text_hit;
+assign menu_text_dx = x-50;
+assign menu_text_dy = y-300;
+assign menu_text_hit =  0 < menu_text_dx && menu_text_dx < 400 &&
+								0 < menu_text_dy && menu_text_dy < 100;
+
+wire logo_data, menu_text_data;		
+wire[23:0] logo_rgb, menu_text_rgb;						
+								
+img_logo img_logo_inst (
+	.address (logo_dx + logo_dy * 480),
+	.clock (iVGA_CLK),
+	.q(logo_data)
+);
+
+img_menu_text_data img_menu_text_inst (
+	.address (menu_text_dx + menu_text_dy * 400),
+	.clock (iVGA_CLK),
+	.q(menu_text_data)
+);
+
+assign logo_rgb = logo_data == 1 ? 24'hFFFFFF : 24'd0;
+assign menu_text_rgb = menu_text_data == 1 ? 24'hFFFFFF : 24'd0;
 
 /////////////////////////////////////////////////
 // Background
 wire[7:0] background_data;
 wire[7:0] background_r, background_g, background_b;
+wire[23:0] asteroid_rgb;
+
+asteroid_module asteroid_module_inst(
+	.clock(iVGA_CLK),
+	.x(x), .y(y),
+	.rgb(asteroid_rgb)
+);
 
 bgr_data	bgr_data_inst (
 	.address (y*512+x),
@@ -110,22 +149,25 @@ bgr_data	bgr_data_inst (
 	.q (background_data)
 );
 
-assign background_b = (background_data & 8'b00000011) << 5;
-assign background_g = (background_data & 8'b00011100) << 3;
-assign background_r = (background_data & 8'b11100000);
+assign background_b = asteroid_rgb != 24'd0 ? asteroid_rgb[23:16] : (background_data & 8'b00000011) << 5;
+assign background_g = asteroid_rgb != 24'd0 ? asteroid_rgb[15:8] : (background_data & 8'b00011100) << 3;
+assign background_r = asteroid_rgb != 24'd0 ? asteroid_rgb[7:0] : (background_data & 8'b11100000);
 
 /////////////////
 // RGB OUTPUT
 
 wire is_bgr;
 wire[23:0] final_rgb;
-
-assign final_rgb = state == 0 ? 24'd0 : game_rgb;
+assign final_rgb = (state == 0 && logo_hit) 			? logo_rgb : 
+						 (state == 0 && menu_text_hit) 	? menu_text_rgb :
+						 (state == 1) 							? game_rgb : 24'd0;
+														  
 assign is_bgr = final_rgb == 24'd0;
 
-assign b_data = is_bgr ? background_b : final_rgb[23:16];
-assign g_data = is_bgr ? background_g : final_rgb[15:8];
-assign r_data = is_bgr ? background_r : final_rgb[7:0];
+// replace 8'd0 with sidebar[7:0]
+assign b_data = x >= 512 ? 8'd0 : (is_bgr ? background_b : final_rgb[23:16]);
+assign g_data = x >= 512 ? 8'd0 : (is_bgr ? background_g : final_rgb[15:8]);
+assign r_data = x >= 512 ? 8'd0 : (is_bgr ? background_r : final_rgb[7:0]);
 
 endmodule
  	

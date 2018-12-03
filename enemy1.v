@@ -4,6 +4,7 @@ module enemy1(
 	x, y, 
 	collided,
 	enemy_pos,
+	enemy_dead,
 	rgb
 );
 
@@ -16,6 +17,7 @@ input initialize;
 input [18:0] x, y;
 input collided;
 output [19:0] enemy_pos;
+output enemy_dead;
 output [24:0] rgb;
 
 
@@ -44,7 +46,7 @@ always @(posedge clock) begin // when initialize bit is asserted
 	end
 	
 	if(state >= 1) begin
-		prbs <= { prbs[29:0], (prbs[30] ^ prbs[27]) & 1'b1 };
+		prbs <= { prbs[29:0], (prbs[30] ^ prbs[27]) };
 	end
 end
 
@@ -89,6 +91,8 @@ always @(negedge clock) begin
 		state = 0;
 	end
 end
+
+assign enemy_dead = state == 3;
 
 assign enemy_dx = (x-enemy_x) & WIDTH_MASK;
 assign enemy_dy = y-enemy_y;

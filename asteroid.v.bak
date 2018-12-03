@@ -1,0 +1,7 @@
+module asteroid(
+	clock,
+	x, y,
+	rgb
+);
+
+endmodule 
