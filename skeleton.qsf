@@ -214,4 +214,17 @@ set_global_assignment -name QIP_FILE ship_exp1.qip
 set_global_assignment -name QIP_FILE ship_exp2.qip
 set_global_assignment -name QIP_FILE ship_exp3.qip
 set_global_assignment -name QIP_FILE ship_exp4.qip
+set_global_assignment -name QIP_FILE a.qip
+set_global_assignment -name VERILOG_FILE audio_controller/Altera_UP_Audio_Bit_Counter.v
+set_global_assignment -name VERILOG_FILE audio_controller/Altera_UP_SYNC_FIFO.v
+set_global_assignment -name VERILOG_FILE audio_controller/Altera_UP_Clock_Edge.v
+set_global_assignment -name VERILOG_FILE audio_controller/Altera_UP_Audio_Out_Serializer.v
+set_global_assignment -name VERILOG_FILE audio_controller/Altera_UP_Audio_In_Deserializer.v
+set_global_assignment -name VERILOG_FILE audio_controller/Audio_Controller.v
+set_location_assignment PIN_D2 -to AUD_ADCDAT
+set_location_assignment PIN_C2 -to AUD_ADCLRCK
+set_location_assignment PIN_F2 -to AUD_BCLK
+set_location_assignment PIN_D1 -to AUD_DACDAT
+set_location_assignment PIN_E3 -to AUD_DACLRCK
+set_location_assignment PIN_E1 -to AUD_XCK
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

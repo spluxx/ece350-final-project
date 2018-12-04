@@ -17,7 +17,15 @@ module skeleton(
 	right,
 	up,
 	down,
-	fire
+	fire,
+	
+	// audio ports
+	AUD_ADCLRCK,
+	AUD_ADCDAT,
+	AUD_DACLRCK,
+	AUD_DACDAT,
+	AUD_XCK,
+	AUD_BCLK
 );  													
 		
 	////////////////////////	VGA	////////////////////////////
@@ -54,6 +62,7 @@ module skeleton(
 	wire			 ps2_key_pressed;
 	wire	[7:0]	 ps2_out;	
 	
+	
 	// clock divider (by 5, i.e., 10 MHz)
 	pll div(CLOCK_50,inclock);
 	assign clock = CLOCK_50;
@@ -83,8 +92,11 @@ module skeleton(
 	Hexadecimal_To_Seven_Segment hex8(4'b0, seg8);
 		
 	// VGA
+	wire AUD_CTRL_CLK;
+	
 	Reset_Delay			r0	(.iCLK(CLOCK_50),.oRESET(DLY_RST)	);
 	VGA_Audio_PLL 		p1	(.areset(~DLY_RST),.inclk0(CLOCK_50),.c0(VGA_CTRL_CLK),.c1(AUD_CTRL_CLK),.c2(VGA_CLK)	);
+	
 	vga_controller vga_ins(
 		.CLOCK_50(CLOCK_50),
 		.iRST_n(DLY_RST),
@@ -100,7 +112,69 @@ module skeleton(
 		.up(up),
 		.down(down),
 		.fire(fire),
-		.leds(leds)
+		.leds()
+	);
+	
+	/////////////// AUDIO ////////////////////
+	input				AUD_ADCDAT;
+	inout				AUD_BCLK;
+	inout				AUD_ADCLRCK;
+	inout				AUD_DACLRCK;
+	
+	// Outputs
+	output				AUD_XCK;
+	assign 				AUD_XCK = AUD_CTRL_CLK;
+	
+	output				AUD_DACDAT;
+	
+	wire				audio_in_available;
+	wire[31:0]		left_channel_audio_in;
+	wire[31:0]		right_channel_audio_in;
+	wire				read_audio_in;
+	
+	wire				audio_out_allowed;
+	wire[31:0]		left_channel_audio_out;
+	wire[31:0]		right_channel_audio_out;
+	wire				write_audio_out;	
+	
+	assign audio_out_allowed = 1'b0; // no output yet
+	assign left_channel_audio_out = 32'd0;
+	assign right_channel_audio_out = 32'd0;
+	assign write_audio_out = 1'b0;
+	
+	assign leds[0] = audio_in_available;
+	assign leds[7:1] = left_channel_audio_in[6:0];
+	assign read_audio_in = 1'b1;
+	
+	
+	Audio_Controller audio_ins(
+		.CLOCK_50(CLOCK_50),
+		.reset(resetn),
+	
+		.clear_audio_in_memory		(),
+		.read_audio_in				(read_audio_in),
+		
+		.clear_audio_out_memory		(),
+		.left_channel_audio_out		(left_channel_audio_out),
+		.right_channel_audio_out	(right_channel_audio_out),
+		.write_audio_out			(write_audio_out),
+
+		.AUD_ADCDAT					(AUD_ADCDAT),
+
+		// Bidirectionals
+		.AUD_BCLK					(AUD_BCLK),
+		.AUD_ADCLRCK				(AUD_ADCLRCK),
+		.AUD_DACLRCK				(AUD_DACLRCK),
+
+
+		// Outputs
+		.audio_in_available			(audio_in_available),
+		.left_channel_audio_in		(left_channel_audio_in),
+		.right_channel_audio_in		(right_channel_audio_in),
+
+		.audio_out_allowed			(audio_out_allowed),
+
+		.AUD_DACDAT					(AUD_DACDAT)
 	);
 	
 endmodule
