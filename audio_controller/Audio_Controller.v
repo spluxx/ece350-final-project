@@ -35,7 +35,8 @@ module Audio_Controller(
 
 	audio_out_allowed,
 
-	AUD_DACDAT
+	AUD_DACDAT,
+	AUD_XCK
 );
 
 /*****************************************************************************
@@ -75,6 +76,7 @@ output		[AUDIO_DATA_WIDTH:1]	right_channel_audio_in;
 output	reg			audio_out_allowed;
 
 output				AUD_DACDAT;
+output				AUD_XCK;	
 
 /*****************************************************************************
  *                 Internal wires and registers Declarations                 *
@@ -264,5 +266,14 @@ Altera_UP_Audio_Out_Serializer Audio_Out_Serializer (
 defparam
 	Audio_Out_Serializer.AUDIO_DATA_WIDTH = AUDIO_DATA_WIDTH;
 
+Audio_Clock Audio_Clock (
+	// Inputs
+	.inclk0			(CLOCK_50),
+	.areset			(),
+
+	// Outputs
+	.c0				(AUD_XCK),
+	.locked			()
+);	
 endmodule
 

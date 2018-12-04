@@ -17,7 +17,7 @@ module skeleton(
 	right,
 	up,
 	down,
-	fire,
+//	fire,
 	
 	// audio ports
 	AUD_ADCLRCK,
@@ -25,7 +25,10 @@ module skeleton(
 	AUD_DACLRCK,
 	AUD_DACDAT,
 	AUD_XCK,
-	AUD_BCLK
+	AUD_BCLK,
+	
+	I2C_SDAT,
+	I2C_SCLK
 );  													
 		
 	////////////////////////	VGA	////////////////////////////
@@ -51,7 +54,8 @@ module skeleton(
 	output   [11:0]   debug_addr;
 	
 	////////////////////////   Ship control /////////////////////////////
-	input left, right, up, down, fire;
+	input left, right, up, down;
+//	fire;
 	
 	/////////////////////////////////////////////////////////////////////
 	
@@ -120,37 +124,66 @@ module skeleton(
 	inout				AUD_BCLK;
 	inout				AUD_ADCLRCK;
 	inout				AUD_DACLRCK;
+		
+	inout				I2C_SDAT;
+	output			I2C_SCLK;
 	
 	// Outputs
-	output				AUD_XCK;
-	assign 				AUD_XCK = AUD_CTRL_CLK;
+	output			AUD_XCK;
 	
-	output				AUD_DACDAT;
+	output			AUD_DACDAT;
 	
 	wire				audio_in_available;
-	wire[31:0]		left_channel_audio_in;
-	wire[31:0]		right_channel_audio_in;
+	wire signed[31:0]	left_channel_audio_in;
+	wire signed[31:0]	right_channel_audio_in;
 	wire				read_audio_in;
 	
 	wire				audio_out_allowed;
 	wire[31:0]		left_channel_audio_out;
 	wire[31:0]		right_channel_audio_out;
 	wire				write_audio_out;	
+
 	
-	assign audio_out_allowed = 1'b0; // no output yet
-	assign left_channel_audio_out = 32'd0;
-	assign right_channel_audio_out = 32'd0;
-	assign write_audio_out = 1'b0;
+	reg [31:0] counter;
+	reg signed [63:0] sum;
+	reg [63:0] res;
+
+	initial begin
+		sum = 64'd0;
+		counter = 0;
+		res = 64'd0;
+	end
+
+	always @(negedge AUD_XCK) begin
+		sum = sum + left_channel_audio_in;
+		counter = counter + 1;
+		if(counter >= 1000000) begin
+			res = sum / counter;
+			counter = 0;
+		end
+	end
 	
-	assign leds[0] = audio_in_available;
-	assign leds[7:1] = left_channel_audio_in[6:0];
-	assign read_audio_in = 1'b1;
+	assign read_audio_in			= audio_in_available & audio_out_allowed;
+
+	wire [31:0] left_in, right_in, left_out, right_out;
+	assign left_in = left_channel_audio_in;
+	assign right_in = right_channel_audio_in;
+
+	assign left_out = left_in;
+	assign right_out = right_in;
+
+	assign fire = | res[31:26];
+	assign leds = res[31:24];
+
+	assign left_channel_audio_out	= left_out;
+	assign right_channel_audio_out	= right_out;
+	assign write_audio_out			= audio_in_available & audio_out_allowed;
 	
-	
-	Audio_Controller audio_ins(
-		.CLOCK_50(CLOCK_50),
-		.reset(resetn),
-	
+	Audio_Controller Audio_Controller (
+		// Inputs
+		.CLOCK_50						(CLOCK_50),
+		.reset						(1'b0),
+
 		.clear_audio_in_memory		(),
 		.read_audio_in				(read_audio_in),
 		
@@ -174,7 +207,19 @@ module skeleton(
 
 		.audio_out_allowed			(audio_out_allowed),
 
-		.AUD_DACDAT					(AUD_DACDAT)
+		.AUD_XCK					(AUD_XCK),
+		.AUD_DACDAT					(AUD_DACDAT),
+
 	);
+
+	avconf #(.USE_MIC_INPUT(1)) avc (
+		.I2C_SCLK					(I2C_SCLK),
+		.I2C_SDAT					(I2C_SDAT),
+		.CLOCK_50					(CLOCK_50),
+		.reset						(1'b0),
+		.key1							(1'b1),
+		.key2							(1'b1)
+	);
+
 	
 endmodule
