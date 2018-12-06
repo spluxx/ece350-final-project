@@ -1,5 +1,6 @@
 module bullet_module(
 	clock,
+	reset,
 	start,
 	ship_x, ship_y,
 	x, y,
@@ -12,6 +13,7 @@ module bullet_module(
 parameter BULLET_NUM = 20;
 
 input clock, start;
+input reset;
 input [18:0] ship_x, ship_y, x, y;
 input fire;
 input[BULLET_NUM-1:0] collided;
@@ -69,6 +71,7 @@ generate
 	for(i = 0 ; i < BULLET_NUM ; i = i + 1) begin: bullet_loop
 		bullet bullet_inst(
 			.clock(clock),
+			.reset(reset),
 			.x(x), .y(y),
 			.fire(fire_bullet[i]),
 			.new_x(ship_x+13),

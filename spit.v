@@ -1,5 +1,6 @@
 module spit(
-	clock, 
+	clock,
+	reset,
 	x, y,
 	fire,
 	new_x, new_y,
@@ -12,9 +13,9 @@ module spit(
 
 parameter WIDTH_MASK = 19'd511;
 
-input clock;
+input clock, reset;
 input fire;
-input [18:0] x, y, new_x, new_y, new_vx, new_vy;
+input signed[18:0] x, y, new_x, new_y, new_vx, new_vy;
 input collided;
 
 output [19:0] spit_pos;
@@ -56,7 +57,7 @@ always @(negedge clock) begin
 		counter = counter + 1;
 	end
 	
-	if(collided) begin
+	if(collided || reset) begin
 		spit_x = 0;
 		spit_y = 0;
 		state = 0;

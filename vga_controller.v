@@ -129,6 +129,7 @@ end
 //////////////////
 // GAME MODULE
 wire [23:0] game_rgb;
+wire reset;
 
 GAME_MODULE game_inst(
 	.clock(iVGA_CLK),
@@ -141,9 +142,10 @@ GAME_MODULE game_inst(
 	.fire(fire),
 	.ship_dead(ship_dead),
 	.rgb(game_rgb),
-	.leds(),
+	.leds(leds),
 	.score(score),
-	.hp(hp)
+	.hp(hp),
+	.reset(reset) // we might need it?
 );
 
 //////////////////

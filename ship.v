@@ -1,5 +1,6 @@
 module ship(
 	clock, 
+	reset,
 	start,
 	x, y, 
 	initial_hp,
@@ -11,6 +12,7 @@ module ship(
 	hp
 );
 	input clock;
+	input reset;
 	input start;
 	input [18:0] x, y;
 	input left, right, up, down;
@@ -79,7 +81,7 @@ module ship(
 					state = 2;
 					ctrl_counter = 0;
 				end
-			end	
+			end
 		end
 		
 		if(state == 0 && start) begin
@@ -89,6 +91,12 @@ module ship(
 			hp = initial_hp;
 			state = 1;
 			ship_dead = 0;
+		end
+		
+		if(reset) begin
+			ship_x = 19'd320;
+			ship_y = 19'd400;
+			ctrl_counter = 32'd0;
 		end
 		
 		

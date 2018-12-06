@@ -141,7 +141,7 @@ module skeleton(
 //		.menu(~menu_fpga),
 //		.fire(~fire_fpga | sound_fire),
 		
-		.leds(),
+		.leds(leds),
 		.first(r20), .second(r21), .third(r22), .fourth(r23), .fifth(r24), .ACK(r26),
 		.NEW_SCORE(r25_data), .NEW_SCORE_EN(r25_en)
 	);
