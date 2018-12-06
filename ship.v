@@ -1,5 +1,6 @@
 module ship(
 	clock, 
+	reset,
 	start,
 	x, y, 
 	initial_hp,
@@ -7,9 +8,11 @@ module ship(
 	ship_x, ship_y,
 	collided,
 	ship_dead,
-	rgb
+	rgb,
+	hp
 );
 	input clock;
+	input reset;
 	input start;
 	input [18:0] x, y;
 	input left, right, up, down;
@@ -25,7 +28,7 @@ module ship(
 	reg[31:0] ctrl_counter;
 	reg[31:0] anim_counter;
 	reg[31:0] flick_counter;
-	reg[9:0] hp;
+	output reg[9:0] hp;
 	reg ship_dead;
 	
 	initial begin
@@ -39,16 +42,16 @@ module ship(
 	always @(negedge clock) begin 
 		if(state == 1 || state == 3) begin // state = 1 normal // state = 3 invincible, flicking
 			if(ctrl_counter >= 32'd100000) begin
-				if(!left) begin
+				if(left) begin
 					ship_x = ship_x - 1;
 				end
-				if(!right) begin
+				if(right) begin
 					ship_x = ship_x + 1;
 				end
-				if(!up) begin
+				if(up) begin
 					ship_y = ship_y - 1;
 				end
-				if(!down) begin
+				if(down) begin
 					ship_y = ship_y + 1;
 				end
 				
@@ -78,7 +81,7 @@ module ship(
 					state = 2;
 					ctrl_counter = 0;
 				end
-			end	
+			end
 		end
 		
 		if(state == 0 && start) begin
@@ -90,6 +93,12 @@ module ship(
 			ship_dead = 0;
 		end
 		
+		if(reset) begin
+			ship_x = 19'd320;
+			ship_y = 19'd400;
+			ctrl_counter = 32'd0;
+		end
+		
 		
 		if(state == 2) begin
 			if(ctrl_counter > 100000000) begin // go back to menu // register high score here
@@ -99,6 +108,7 @@ module ship(
 		end
 		
 		if(~start) begin
+			hp = 0;
 			state = 0;
 		end
 	end

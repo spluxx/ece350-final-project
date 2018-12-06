@@ -1,5 +1,7 @@
 module enemy1(
 	clock, 
+	reset,
+	level,
 	initial_x, initial_y, initial_hp, initialize,
 	x, y, 
 	collided,
@@ -11,6 +13,8 @@ module enemy1(
 parameter WIDTH_MASK = 19'd511;
 
 input clock;
+input reset;
+input[9:0] level;
 input [9:0] initial_x, initial_y;
 input [9:0] initial_hp; 
 input initialize;
@@ -20,11 +24,10 @@ output [19:0] enemy_pos;
 output enemy_dead;
 output [24:0] rgb;
 
-
 reg [1:0] state; //0-> uninitialized // 1-> moving right // 2 -> moving left
 reg[9:0] enemy_x, enemy_y;
 wire[18:0] enemy_dx, enemy_dy;
-reg[31:0] ctrl_counter, collision_counter;
+reg[31:0] ctrl_counter;
 reg[4:0] move_counter;
 reg[9:0] hp;
 
@@ -36,7 +39,6 @@ assign enemy_pos[9:0] = enemy_y[9:0];
 initial begin
 	state <= 2'd0;
 	ctrl_counter <= 32'd0;
-	collision_counter <= 32'd0;
 	move_counter <= 5'd0;
 end
 
@@ -84,7 +86,14 @@ always @(negedge clock) begin
 		end		
 		
 		ctrl_counter = ctrl_counter + 1;
-		collision_counter = collision_counter + 1;
+	end
+	
+	if(reset) begin
+		enemy_x = initial_x;
+		enemy_y = initial_y;
+		hp = initial_hp + level * 2;
+		ctrl_counter = 0;
+		state = 1;
 	end
 	
 	if(~initialize) begin
@@ -109,6 +118,13 @@ img_enemy1 img_enemy_inst (
 	.q (img_rgb)
 );
 
-assign rgb = (~(state == 0 || state == 3) && hit) ? img_rgb : 24'h000000;
+wire[23:0] tweaked_rgb;
+
+assign tweaked_rgb[23:16] = img_rgb[23:16] > 30*(level-1) ? img_rgb[23:16]-30*(level-1) : img_rgb[23:16];
+assign tweaked_rgb[15:8] = img_rgb[15:8] > 30*(level-1) ? img_rgb[15:8]-30*(level-1) : img_rgb[15:8];
+assign tweaked_rgb[7:0] = img_rgb[7:0] > 30*(level-1) ? img_rgb[7:0]-30*(level-1) : img_rgb[7:0];
+
+
+assign rgb = (~(state == 0 || state == 3) && hit) ? tweaked_rgb : 24'h000000;
 
 endmodule 

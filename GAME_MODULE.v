@@ -5,7 +5,10 @@ module GAME_MODULE(
 	up, left, right, down, fire,
 	ship_dead,
 	rgb,
-	leds
+	leds,
+	score,
+	hp, 
+	reset,
 );
 
 parameter NUM_ENEMY1 = 6;
@@ -16,6 +19,10 @@ input [18:0] x, y;
 output[23:0] rgb;
 output ship_dead;
 output[7:0] leds;
+output [31:0] score;
+output[9:0] hp;
+
+output reg reset; // resets the level, preserving hp/score
 
 ////////////////////////////////////////////////
 // Ship - Fixed width 30 height 40
@@ -29,6 +36,7 @@ wire collided_ship;
 
 ship ship_inst(
 	.clock(clock),
+	.reset(reset),
 	.start(start),
 	.initial_hp(5),
 	.x(x), .y(y),
@@ -39,7 +47,8 @@ ship ship_inst(
 	.ship_x(ship_x), .ship_y(ship_y),
 	.collided(collided_ship),
 	.ship_dead(ship_dead),
-	.rgb(ship_rgb)
+	.rgb(ship_rgb),
+	.hp(hp)
 );
 
 ////////////////////////////////////////////////////
@@ -60,11 +69,19 @@ wire [29:0] collided_spit;
 
 wire [NUM_ENEMY1-1:0] enemy_dead;
 
+reg[1:0] state;
+reg[9:0] level;
+reg [NUM_ENEMY1-1:0] counted_enemy_dead;
+reg [31:0] score;
+integer idx;
+
 genvar i;
 generate
 	for(i = 0 ; i < NUM_ENEMY1 ; i = i + 1) begin: enemy1gen
 		enemy1 enemy1_inst(
 			.clock(clock),
+			.reset(reset),
+			.level(level),
 			.initial_x(60*(i & 7) + 10),
 			.initial_y(100*(i >> 3) + 10),
 			.initial_hp(5),
@@ -78,8 +95,52 @@ generate
 	end
 endgenerate
 
+initial begin
+	state = 0;
+end
+
+assign leds[5:0] = counted_enemy_dead;
+assign leds[6] = start;
+assign leds[7] = reset;
+
+always @(negedge clock) begin
+	if(state == 1) begin
+		for(idx = 0 ; idx < NUM_ENEMY1 ; idx = idx + 1) begin
+			if(~counted_enemy_dead[idx] && enemy_dead[idx]) begin
+				score = score + 37;
+				counted_enemy_dead[idx] = 1;
+			end
+		end
+	end
+	
+	if(state == 0 && start) begin // starting at level 1
+		counted_enemy_dead = 0;
+		score = 0;
+		level = 1;
+		state = 1;
+	end
+		
+	if(state == 2 && (left | right | up | down)) begin
+		state = 1;
+		reset = 0;
+	end	
+	
+	if(& counted_enemy_dead) begin // everything dead
+		counted_enemy_dead = 0;
+		state = 2;
+		reset = 1;
+		level = level + 1;
+	end
+
+	if(~start) begin
+		state = 0;
+		level = 1;
+	end
+end
+
 bullet_module bullet_module_inst (
 	.clock(clock),
+	.reset(reset),
 	.start(start),
 	.ship_x(ship_x), 
 	.ship_y(ship_y),
@@ -109,10 +170,13 @@ spit_module #(
 	.NUM_ENEMY(NUM_ENEMY1)
 )spit_module_inst (
 	.clock(clock),
+	.reset(reset),
+	.level(level),
 	.start(start),
 	.enemy_pos(enemy_pos),
 	.enemy_dead(enemy_dead),
 	.x(x), .y(y),
+	.ship_x(ship_x),
 	.collided(collided_spit),
 	.spit_pos(spit_pos),
 	.rgb(rgb_spit)
@@ -132,10 +196,6 @@ collision_module #(
 	.resultA(collided_ship),
 	.resultB(collided_spit)
 );
-
-assign leds[0] = collided_ship;
-assign leds[7:1] = collided_spit[6:0];
-
 
 ////////////////////////////////////////////////
 // final decision on the pixel at (x, y)

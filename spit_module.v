@@ -1,9 +1,12 @@
 module spit_module(
 	clock,
+	reset,
 	start,
+	level,
 	enemy_pos,
 	enemy_dead,
 	x, y,
+	ship_x,
 	collided,
 	spit_pos,
 	rgb
@@ -11,10 +14,12 @@ module spit_module(
 
 parameter NUM_ENEMY = 5;
 
-input clock, start;
+input clock, reset, start;
+input [9:0] level;
 input [20*NUM_ENEMY-1:0] enemy_pos;
 input [NUM_ENEMY-1:0] enemy_dead;
 input [18:0] x, y;
+input [9:0] ship_x;
 input[29:0] collided;
 
 output [20*30-1:0] spit_pos;
@@ -31,6 +36,7 @@ reg[6:0] enemy_index;
 reg [29:0] fire_spit;
 reg[31:0] fire_delay;
 reg[9:0] fire_x, fire_y;
+reg signed [9:0] fire_vx; 
 reg [30:0] prbs; // pseudo-random bit sequence
 
 initial begin
@@ -51,10 +57,12 @@ always @(posedge clock) begin
 			fire_spit = 30'd0; // make sure it's unplugged
 		end
 		
-		if(fire_delay == 100000) begin
+		if(fire_delay == (100000 - level*5000)) begin
 			enemy_index = prbs[6:0] % NUM_ENEMY;
 			fire_x = enemy_x[enemy_index];
 			fire_y = enemy_y[enemy_index];
+			fire_vx = level == 1 ? 0 : 
+						 enemy_x[enemy_index] < ship_x ? {14'd0, prbs[4:0]%level} : {14'b11111111111111, -(prbs[4:0]%level)};
 			fire_spit[index] = ~enemy_dead[enemy_index];
 			if(index == 30) index = 0;
 			fire_delay = 0;
@@ -68,11 +76,12 @@ generate
 	for(i = 0 ; i < 30 ; i = i + 1) begin: spit_loop
 		spit spit_inst(
 			.clock(clock),
+			.reset(reset),
 			.x(x), .y(y),
 			.fire(fire_spit[i]),
 			.new_x(fire_x+13),
 			.new_y(fire_y+40),
-			.new_vx(0),
+			.new_vx(fire_vx),
 			.new_vy(2),
 			.collided(collided[i]),
 			.spit_pos(spit_pos[20*i+19 : 20*i]),

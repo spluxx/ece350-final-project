@@ -16,8 +16,18 @@ module vga_controller(
 	up,
 	down,
 	fire,
+	menu,
 	
-	leds
+	leds,
+	
+	first, 
+	second,
+	third, 
+	fourth, 
+	fifth, 
+	ACK,
+	NEW_SCORE, 
+	NEW_SCORE_EN
 );
 
 input CLOCK_50;
@@ -32,8 +42,13 @@ output [7:0] r_data;
 
 output [7:0] leds; 
 
-input left, right, up, down, fire; 
+input left, right, up, down, fire, menu; 
+// SCORES -------------------------------------------
+input [31:0] first, second, third, fourth, fifth, ACK;
+output reg [31:0] NEW_SCORE;
+output reg NEW_SCORE_EN;
 
+wire[9:0] hp;
 ///////// ////                     
 reg [18:0] ADDR;
 wire VGA_CLK_n;
@@ -82,26 +97,39 @@ wire ship_dead;
 initial begin
 	state = 0;
 	counter = 0;
+	NEW_SCORE = 0;
+	NEW_SCORE_EN = 1;
 end
 
+wire[31:0] score;
 
 always @(posedge iVGA_CLK) begin
-	if(state == 1 && (~down || ship_dead)) begin
+	if(state == 1 && (menu || ship_dead)) begin
+		NEW_SCORE = score;
 		state = 0;
 		counter = 0;
 	end
 	
 	if(state == 0) begin
-		if(~up) state = 1;
+		if(ACK[0]) begin
+			NEW_SCORE = 0;
+		end
+		
+		if((up | down | left | right) && ~menu) begin  // start game
+			state = 1;
+		end
+		
 		if(counter < 32'h07ffffff) begin
 			counter = counter + 1;
 		end
 	end
 end
 
+
 //////////////////
 // GAME MODULE
 wire [23:0] game_rgb;
+wire reset;
 
 GAME_MODULE game_inst(
 	.clock(iVGA_CLK),
@@ -114,7 +142,10 @@ GAME_MODULE game_inst(
 	.fire(fire),
 	.ship_dead(ship_dead),
 	.rgb(game_rgb),
-	.leds(leds)
+	.leds(leds),
+	.score(score),
+	.hp(hp),
+	.reset(reset) // we might need it?
 );
 
 //////////////////
@@ -156,6 +187,67 @@ assign gradient[7:0] = counter >> 19;
 assign logo_rgb = logo_data ? gradient : 24'd0;
 assign menu_text_rgb = menu_text_data ? gradient : 24'd0;
 
+
+///////////////////////////
+// SIDEBAR - CURRENT SCORE / HIGH SCORE
+wire[23:0] sidebar_rgb;
+wire[23:0] number_rgb;
+
+number_display number_display_inst(
+	.clock(iVGA_CLK),
+	.x(x), .y(y),
+	.score(score),
+	.first(first),
+	.second(second),
+	.third(third),
+	.fourth(fourth),
+	.fifth(fifth),
+	.rgb(number_rgb)
+);
+
+wire highscore_hit;
+wire[23:0] highscore_rgb;
+assign highscore_hit = 512 < x && x < 640 && 208 < y && y < 240;
+high_score high_score_inst(
+	.clock(iVGA_CLK),
+	.address(x-512+(y-208)*128),
+	.q(highscore_rgb)
+);
+
+wire score_hit;
+wire[23:0] score_rgb;
+assign score_hit = 512 < x && x < 640 && 60 < y && y < 72;
+score score_inst(
+	.clock(iVGA_CLK),
+	.address(x-512+(y-60)*128),
+	.q(score_rgb)
+);
+
+wire health_hit[4:0];
+wire[23:0] health_rgb[4:0];
+
+genvar i;
+generate 
+	for(i = 0 ; i < 5 ; i = i + 1) begin: loopyloop
+		health health_inst(
+			.clock(iVGA_CLK),
+			.address(x-(522+20*i) + (y-10)*20),
+			.q(health_rgb[i])
+		);
+		assign health_hit[i] = 522+20*i < x && x < 542+20*i && 10 < y && y < 30;
+	end
+endgenerate
+
+assign sidebar_rgb = 
+	number_rgb != 24'd0 ? number_rgb :
+	highscore_hit ? highscore_rgb :
+	score_hit 	  ? score_rgb :
+	health_hit[0] && hp >= 1 ? health_rgb[0] :
+	health_hit[1] && hp >= 2 ? health_rgb[1] :
+	health_hit[2] && hp >= 3 ? health_rgb[2] :
+	health_hit[3] && hp >= 4 ? health_rgb[3] :
+	health_hit[4] && hp >= 5 ? health_rgb[4] : 24'd0;
+
 /////////////////////////////////////////////////
 // Background
 wire[7:0] background_data;
@@ -190,9 +282,9 @@ assign final_rgb = (state == 0 && logo_hit) 			? logo_rgb :
 assign is_bgr = final_rgb == 24'd0;
 
 // replace 8'd0 with sidebar[7:0]
-assign b_data = x >= 512 ? 8'd0 : (is_bgr ? background_b : final_rgb[23:16]);
-assign g_data = x >= 512 ? 8'd0 : (is_bgr ? background_g : final_rgb[15:8]);
-assign r_data = x >= 512 ? 8'd0 : (is_bgr ? background_r : final_rgb[7:0]);
+assign b_data = x >= 512 ? sidebar_rgb[23:16] : (is_bgr ? background_b : final_rgb[23:16]);
+assign g_data = x >= 512 ? sidebar_rgb[15:8] : (is_bgr ? background_g : final_rgb[15:8]);
+assign r_data = x >= 512 ? sidebar_rgb[7:0] : (is_bgr ? background_r : final_rgb[7:0]);
 
 endmodule
  	
