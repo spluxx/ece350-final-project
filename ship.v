@@ -7,7 +7,8 @@ module ship(
 	ship_x, ship_y,
 	collided,
 	ship_dead,
-	rgb
+	rgb,
+	hp
 );
 	input clock;
 	input start;
@@ -25,7 +26,7 @@ module ship(
 	reg[31:0] ctrl_counter;
 	reg[31:0] anim_counter;
 	reg[31:0] flick_counter;
-	reg[9:0] hp;
+	output reg[9:0] hp;
 	reg ship_dead;
 	
 	initial begin
@@ -39,16 +40,16 @@ module ship(
 	always @(negedge clock) begin 
 		if(state == 1 || state == 3) begin // state = 1 normal // state = 3 invincible, flicking
 			if(ctrl_counter >= 32'd100000) begin
-				if(!left) begin
+				if(left) begin
 					ship_x = ship_x - 1;
 				end
-				if(!right) begin
+				if(right) begin
 					ship_x = ship_x + 1;
 				end
-				if(!up) begin
+				if(up) begin
 					ship_y = ship_y - 1;
 				end
-				if(!down) begin
+				if(down) begin
 					ship_y = ship_y + 1;
 				end
 				
@@ -99,6 +100,7 @@ module ship(
 		end
 		
 		if(~start) begin
+			hp = 0;
 			state = 0;
 		end
 	end

@@ -9,20 +9,22 @@ module bullet_module(
 	rgb
 );
 
+parameter BULLET_NUM = 20;
+
 input clock, start;
 input [18:0] ship_x, ship_y, x, y;
 input fire;
-input[29:0] collided;
+input[BULLET_NUM-1:0] collided;
 
-output [20*30-1:0] bullet_pos;
+output [20*BULLET_NUM-1:0] bullet_pos;
 output [23:0] rgb;
 
-wire [23:0] rgb_res[29:0];
-wire hit[29:0];
+wire [23:0] rgb_res[BULLET_NUM:0];
+wire hit[BULLET_NUM:0];
 
 reg state;
 reg[4:0] index;
-reg[29:0] fire_bullet;
+reg[BULLET_NUM:0] fire_bullet;
 reg[31:0] fire_delay;
 
 initial begin
@@ -43,13 +45,13 @@ always @(posedge clock) begin
 	
 	if(state == 1 && fire) begin
 		if(fire_delay < 100) begin
-			fire_bullet = 30'd0; // make sure it's unplugged
+			fire_bullet = 20'd0; // make sure it's unplugged
 		end
 		
 		if(fire_delay == 5000000) begin
 			fire_bullet[index] = 1;
 			index = index + 1;
-			if(index == 30) index = 0;
+			if(index == BULLET_NUM) index = 0;
 			
 			fire_delay = 0;
 		end
@@ -64,7 +66,7 @@ end
 
 genvar i;
 generate 
-	for(i = 0 ; i < 30 ; i = i + 1) begin: bullet_loop
+	for(i = 0 ; i < BULLET_NUM ; i = i + 1) begin: bullet_loop
 		bullet bullet_inst(
 			.clock(clock),
 			.x(x), .y(y),
@@ -101,17 +103,7 @@ assign rgb =
 	hit[16] ? rgb_res[16] :
 	hit[17] ? rgb_res[17] :
 	hit[18] ? rgb_res[18] :
-	hit[19] ? rgb_res[19] :
-	hit[20] ? rgb_res[20] :
-	hit[21] ? rgb_res[21] :
-	hit[22] ? rgb_res[22] :
-	hit[23] ? rgb_res[23] :
-	hit[24] ? rgb_res[24] :
-	hit[25] ? rgb_res[25] :
-	hit[26] ? rgb_res[26] :
-	hit[27] ? rgb_res[27] :
-	hit[28] ? rgb_res[28] :
-	hit[29] ? rgb_res[29] : 24'h000000;
+	hit[19] ? rgb_res[19] : 24'h000000;
 	
 	
 

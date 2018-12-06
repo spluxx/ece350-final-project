@@ -5,7 +5,9 @@ module GAME_MODULE(
 	up, left, right, down, fire,
 	ship_dead,
 	rgb,
-	leds
+	leds,
+	score,
+	hp
 );
 
 parameter NUM_ENEMY1 = 6;
@@ -16,6 +18,8 @@ input [18:0] x, y;
 output[23:0] rgb;
 output ship_dead;
 output[7:0] leds;
+output [31:0] score;
+output[9:0] hp;
 
 ////////////////////////////////////////////////
 // Ship - Fixed width 30 height 40
@@ -39,7 +43,8 @@ ship ship_inst(
 	.ship_x(ship_x), .ship_y(ship_y),
 	.collided(collided_ship),
 	.ship_dead(ship_dead),
-	.rgb(ship_rgb)
+	.rgb(ship_rgb),
+	.hp(hp)
 );
 
 ////////////////////////////////////////////////////
@@ -77,6 +82,40 @@ generate
 		);
 	end
 endgenerate
+
+reg state;
+reg[4:0] level;
+reg [NUM_ENEMY1-1:0] counted_enemy_dead;
+reg [31:0] score;
+integer idx;
+
+initial begin
+	state = 0;
+end
+
+always @(negedge clock) begin
+	if(state == 1) begin
+		for(idx = 0 ; idx < NUM_ENEMY1 ; idx = idx + 1) begin
+			if(~counted_enemy_dead[idx] && enemy_dead[idx]) begin
+				score = score + 37;
+				counted_enemy_dead[idx] = 1;
+			end
+		end
+	end
+	
+	if(state == 0 && start) begin // starting at level 1
+		counted_enemy_dead = 0;
+		score = 0;
+		level = 1;
+		state = 1;
+	end
+	
+	if(~start) begin
+		state = 0;
+	end
+end
+
+assign leds = score[7:0];
 
 bullet_module bullet_module_inst (
 	.clock(clock),
@@ -132,10 +171,6 @@ collision_module #(
 	.resultA(collided_ship),
 	.resultB(collided_spit)
 );
-
-assign leds[0] = collided_ship;
-assign leds[7:1] = collided_spit[6:0];
-
 
 ////////////////////////////////////////////////
 // final decision on the pixel at (x, y)

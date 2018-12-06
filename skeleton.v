@@ -17,7 +17,13 @@ module skeleton(
 	right,
 	up,
 	down,
-//	fire,
+	menu,
+	fire,
+	
+	left_fpga,
+	right_fpga,
+	menu_fpga,
+	fire_fpga,
 	
 	// audio ports
 	AUD_ADCLRCK,
@@ -54,7 +60,8 @@ module skeleton(
 	output   [11:0]   debug_addr;
 	
 	////////////////////////   Ship control /////////////////////////////
-	input left, right, up, down;
+	input left, right, up, down, fire, menu;
+	input left_fpga, right_fpga, menu_fpga, fire_fpga;
 //	fire;
 	
 	/////////////////////////////////////////////////////////////////////
@@ -75,7 +82,12 @@ module skeleton(
 	//assign clock = inclock;
 	
 	// your processor
-	processor myprocessor(clock, ~resetn, /*ps2_key_pressed, ps2_out, lcd_write_en, lcd_write_data,*/ debug_data_in, debug_addr);
+	wire [31:0] r20, r21, r22, r23, r24, r26;
+	wire [31:0] r25_data;
+	wire r25_en;
+	processor myprocessor(clock, 1'b0, r20, r21, r22, r23, r24, r25_en, r25_data, r26);
+	
+//	assign leds = r25_data[7:0];
 	
 	// keyboard controller
 	PS2_Interface myps2(clock, resetn, ps2_clock, ps2_data, ps2_key_data, ps2_key_pressed, ps2_out);
@@ -101,6 +113,9 @@ module skeleton(
 	Reset_Delay			r0	(.iCLK(CLOCK_50),.oRESET(DLY_RST)	);
 	VGA_Audio_PLL 		p1	(.areset(~DLY_RST),.inclk0(CLOCK_50),.c0(VGA_CTRL_CLK),.c1(AUD_CTRL_CLK),.c2(VGA_CLK)	);
 	
+	wire sound_fire;
+	wire[9:0] hp;
+	
 	vga_controller vga_ins(
 		.CLOCK_50(CLOCK_50),
 		.iRST_n(DLY_RST),
@@ -111,12 +126,24 @@ module skeleton(
 		.b_data(VGA_B),
 		.g_data(VGA_G),
 		.r_data(VGA_R),
-		.left(left),
-		.right(right),
-		.up(up),
-		.down(down),
-		.fire(fire),
-		.leds()
+		
+		.left(~left),
+		.right(~right),
+		.up(~up),
+		.down(~down),
+		.menu(~menu),
+		.fire(~fire | sound_fire),
+		
+//		.left(~left_fpga),
+//		.right(~right_fpga),
+//		.up(1'b0),
+//		.down(1'b0),
+//		.menu(~menu_fpga),
+//		.fire(~fire_fpga | sound_fire),
+		
+		.leds(),
+		.first(r20), .second(r21), .third(r22), .fourth(r23), .fifth(r24), .ACK(r26),
+		.NEW_SCORE(r25_data), .NEW_SCORE_EN(r25_en)
 	);
 	
 	/////////////// AUDIO ////////////////////
@@ -155,10 +182,13 @@ module skeleton(
 	end
 
 	always @(negedge AUD_XCK) begin
-		sum = sum + left_channel_audio_in;
+		sum = sum + (left_channel_audio_in[31] ? 
+							{32'hffffffff, left_channel_audio_in} : 
+							{32'h00000000, left_channel_audio_in});
 		counter = counter + 1;
 		if(counter >= 1000000) begin
-			res = sum / counter;
+			res = (sum > 0 ? sum : -sum) / counter;
+			sum = 0;
 			counter = 0;
 		end
 	end
@@ -172,8 +202,8 @@ module skeleton(
 	assign left_out = left_in;
 	assign right_out = right_in;
 
-	assign fire = | res[31:26];
-	assign leds = res[31:24];
+	
+	assign sound_fire = | res[31:25];
 
 	assign left_channel_audio_out	= left_out;
 	assign right_channel_audio_out	= right_out;
